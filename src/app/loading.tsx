@@ -1,3 +1,4 @@
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
@@ -9,15 +10,32 @@ export default function Loading() {
         <Skeleton className="h-4 w-3/4 mx-auto" />
       </header>
 
-      <section className="w-full max-w-md mb-8 md:mb-12 flex justify-center">
-        <div className="flex w-full max-w-sm items-end space-x-2">
-           <div className="flex-grow space-y-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-10 w-full" />
-           </div>
-            <Skeleton className="h-10 w-10" />
+      {/* Input Section Skeleton */}
+       <section className="w-full max-w-4xl mb-8 md:mb-12 flex flex-col items-center gap-4 md:flex-row md:justify-center md:items-end md:gap-6">
+        {/* Ticker Input Skeleton */}
+        <div className="w-full max-w-xs md:w-auto md:flex-grow space-y-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
         </div>
-      </section>
+
+        {/* Date Pickers Skeleton */}
+        <div className="w-full max-w-xs md:w-auto flex flex-col gap-2 sm:flex-row sm:gap-4">
+            <div className="flex-1 space-y-1">
+              <Skeleton className="h-4 w-20 mb-1" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="flex-1 space-y-1">
+               <Skeleton className="h-4 w-20 mb-1" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+        </div>
+
+         {/* Update Button Skeleton */}
+          <div className="w-full max-w-xs md:w-auto flex justify-center md:self-end">
+              <Skeleton className="h-10 w-full md:w-32" />
+          </div>
+       </section>
+
 
       <section className="w-full max-w-5xl space-y-8">
          <Skeleton className="aspect-video w-full" />
