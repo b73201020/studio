@@ -1,3 +1,5 @@
+"use client"; // Add 'use client' directive
+
 import * as React from 'react';
 
 import {cn} from '@/lib/utils';

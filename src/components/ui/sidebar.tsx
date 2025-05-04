@@ -32,7 +32,7 @@ type SidebarContext = {
   setOpen: (open: boolean) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
-  isMobile: boolean
+  isMobile: boolean | undefined // Allow undefined initially
   toggleSidebar: () => void
 }
 
@@ -76,6 +76,9 @@ const SidebarProvider = React.forwardRef<
     const open = openProp ?? _open
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
+        // Ensure this runs only client-side
+        if (typeof window === 'undefined') return;
+
         const openState = typeof value === "function" ? value(open) : value
         if (setOpenProp) {
           setOpenProp(openState)
@@ -91,6 +94,7 @@ const SidebarProvider = React.forwardRef<
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
+      if (isMobile === undefined) return; // Don't toggle if mobile state is unknown
       return isMobile
         ? setOpenMobile((open) => !open)
         : setOpen((open) => !open)
@@ -98,6 +102,9 @@ const SidebarProvider = React.forwardRef<
 
     // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
+      // Ensure this runs only client-side
+      if (typeof window === 'undefined') return;
+
       const handleKeyDown = (event: KeyboardEvent) => {
         if (
           event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
@@ -177,11 +184,19 @@ const Sidebar = React.forwardRef<
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
+     // Avoid rendering server-side if mobile state is unknown
+    if (isMobile === undefined && collapsible !== "none") {
+      return null;
+    }
+
+
     if (collapsible === "none") {
       return (
         <div
           className={cn(
             "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+             // Ensure it's always visible regardless of mobile state if not collapsible
+            "block",
             className
           )}
           ref={ref}
@@ -212,10 +227,11 @@ const Sidebar = React.forwardRef<
       )
     }
 
+    // Desktop rendering
     return (
       <div
         ref={ref}
-        className="group peer hidden md:block text-sidebar-foreground"
+        className="group peer hidden md:block text-sidebar-foreground" // Keep hidden md:block
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
@@ -234,7 +250,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
+            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex", // Keep hidden md:flex
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -583,7 +599,8 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          // Only show tooltip when collapsed AND not on mobile
+          hidden={state !== "collapsed" || !!isMobile}
           {...tooltip}
         />
       </Tooltip>
