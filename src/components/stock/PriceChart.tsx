@@ -82,7 +82,7 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
      <div className="flex aspect-video w-full items-center justify-center text-muted-foreground">
       {ticker ? `No chart data available for ${ticker}` : "Enter a ticker to see the chart."}
      </div>
-  ); // <<<< FIXED: Added missing closing parenthesis
+  );
 
   return (
     <Card className="transition-opacity duration-300 ease-in-out">
@@ -124,6 +124,8 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                  tickMargin={8}
                  tickFormatter={(value) => {
                      const date = new Date(value);
+                     // Ensure value is a valid date string before formatting
+                     if (isNaN(date.getTime())) return "";
                      return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
                  }}
                  />
@@ -164,9 +166,11 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                      formatter={(value, name, props) => {
                          const payloadData = props.payload as any;
                          if (name === 'candleBody' && payloadData) { // Trigger tooltip on candleBody bar
+                            // Ensure date is valid before formatting
+                            const dateStr = !isNaN(new Date(payloadData.date).getTime()) ? new Date(payloadData.date).toLocaleDateString() : 'Invalid Date';
                             return (
                               <div>
-                                <div className="font-semibold">{new Date(payloadData.date).toLocaleDateString()}</div>
+                                <div className="font-semibold">{dateStr}</div>
                                 <div><span className="text-muted-foreground">開:</span> ${payloadData.open?.toFixed(2)}</div>
                                 <div><span className="text-muted-foreground">高:</span> ${payloadData.high?.toFixed(2)}</div>
                                 <div><span className="text-muted-foreground">低:</span> ${payloadData.low?.toFixed(2)}</div>
@@ -190,11 +194,12 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                 {/* Candlestick Wick (High/Low) - Thin Bar */}
                 <Bar
                    yAxisId="price"
-                   dataKey={(data) => [data.low, data.high]} // Data for the full range (low to high)
+                   dataKey={(dataItem) => [dataItem.low, dataItem.high]} // Data for the full range (low to high)
                    name="candleWick" // Name for tooltip logic (hidden)
                    barSize={1} // Make it very thin like a wick
                    isAnimationActive={!isLoading}
                    animationDuration={300}
+                   shape={<rect />} // Use basic shape, coloring done by Cell
                  >
                     {/* Color based on open/close */}
                     {chartData.map((entry, index) => (
@@ -245,6 +250,8 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                     onChange={handleBrushChange}
                     tickFormatter={(value) => { // Simpler tick format for brush
                          const date = new Date(value);
+                         // Ensure value is a valid date string before formatting
+                         if (isNaN(date.getTime())) return "";
                          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                      }}
                     />
@@ -267,7 +274,7 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
             </div>
         )}
          <div className="leading-none text-muted-foreground">
-           Displaying historical OHLC (Open, High, Low, Close) prices and volume. Green candles indicate Close > Open, Red candles indicate Close < Open. Use the brush/slider below the chart to zoom. Data may be delayed.
+           Displaying historical OHLC (Open, High, Low, Close) prices and volume. Green candles indicate Close &gt;= Open, Red candles indicate Close &lt; Open. Use the brush/slider below the chart to zoom. Data may be delayed. {/* Corrected comparison character */}
          </div>
       </CardFooter>
     </Card>
