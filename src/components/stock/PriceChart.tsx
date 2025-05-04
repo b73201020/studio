@@ -3,17 +3,17 @@
 
 import * as React from "react"
 import type { StockData } from "@/services/stock-data";
-import { TrendingUp, BarChart2 } from "lucide-react"; // Added BarChart2 icon
+import { TrendingUp, BarChart2 } from "lucide-react";
 import {
-    ComposedChart, // Changed from LineChart
-    Bar,          // Added for Volume
-    Line,
+    ComposedChart,
+    Bar,
+    Cell, // Import Cell for custom bar coloring
     CartesianGrid,
     XAxis,
     YAxis,
     Tooltip,
-    Brush,        // Added for zooming/range selection
-    ResponsiveContainer, // Use ResponsiveContainer directly
+    Brush,
+    ResponsiveContainer,
 } from "recharts";
 
 import {
@@ -27,7 +27,7 @@ import {
 import {
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"; // ChartContainer removed as we use ResponsiveContainer directly
+} from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type PriceChartProps = {
@@ -37,27 +37,22 @@ type PriceChartProps = {
 };
 
 // Define colors in config (or use inline styles)
-const chartConfig = {
-  close: {
-    label: "Close",
-    color: "hsl(var(--chart-1))",
-  },
-  volume: {
-    label: "Volume",
-    color: "hsl(var(--chart-2))",
-  },
-};
+// Removed chartConfig as colors are now handled by CSS variables and Cell rendering
 
 export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
   const chartData = React.useMemo(() => {
     return data
       ? data.map(item => ({
           date: item.date,
-          close: item.close,
-          volume: item.volume,
-          open: item.open, // Include OHLC for tooltip
+          // Keep OHLC and Volume for chart and tooltip
+          open: item.open,
           high: item.high,
           low: item.low,
+          close: item.close,
+          volume: item.volume,
+          // Data for candlestick body bar [open, close] or [close, open]
+          // We need to render based on which is higher/lower for recharts Bar
+          candleBody: [item.open, item.close].sort((a, b) => a - b),
         })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // Ensure data is sorted by date
       : [];
   }, [data]);
@@ -87,22 +82,22 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
      <div className="flex aspect-video w-full items-center justify-center text-muted-foreground">
       {ticker ? `No chart data available for ${ticker}` : "Enter a ticker to see the chart."}
      </div>
-  );
+  ); // <<<< FIXED: Added missing closing parenthesis
 
   return (
     <Card className="transition-opacity duration-300 ease-in-out">
       <CardHeader>
         <CardTitle>
-            {ticker ? `${ticker} 技術分析圖` : "技術分析圖"} {/* Updated Title */}
+            {ticker ? `${ticker} K線圖` : "K線圖"}
         </CardTitle>
         <CardDescription>
           {isLoading
            ? `Loading chart data for ${ticker}...`
            : data && data.length > 0
-           ? `Showing closing prices and volume for ${ticker}. Use the brush below to zoom.`
+           ? `顯示 ${ticker} 的開盤價、最高價、最低價、收盤價及成交量。使用下方的滑塊縮放。` // Updated description
            : ticker
            ? `No chart data found for ${ticker}.`
-           : "Enter a ticker symbol to view the price chart."
+           : "Enter a ticker symbol to view the candlestick chart."
           }
         </CardDescription>
       </CardHeader>
@@ -111,13 +106,13 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
           renderSkeletonChart()
         ) : chartData && chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={400}>
-             <ComposedChart // Use ComposedChart
+             <ComposedChart
               data={chartData}
               margin={{
                 top: 5,
-                right: 20,
-                left: 0, // Adjusted margin for YAxis labels
-                bottom: 5, // Adjusted margin for Brush
+                right: 20, // Space for right YAxis
+                left: 0, // Space for left YAxis
+                bottom: 5, // Space for Brush
               }}
              >
                <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -129,21 +124,15 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                  tickMargin={8}
                  tickFormatter={(value) => {
                      const date = new Date(value);
-                     // Adjust formatting based on range? Could get complex.
-                     // Simple day/month format for now.
                      return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
                  }}
-                 // Hide XAxis ticks within the main chart when Brush is active
-                 // Alternatively, keep them but might overlap with Brush ticks
-                 // tick={brushStartIndex !== undefined ? false : true}
-                 // height={brushStartIndex !== undefined ? 1 : undefined} // Reduce space if ticks hidden
                  />
 
-                {/* Y Axis for Price */}
+                {/* Y Axis for Price (Candlestick) */}
                 <YAxis
                   yAxisId="price"
                   orientation="left"
-                  domain={['auto', 'auto']}
+                  domain={['auto', 'auto']} // Auto domain based on high/low
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
@@ -171,70 +160,86 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                  cursor={{ strokeDasharray: '3 3' }}
                  content={
                    <ChartTooltipContent
-                     indicator="dot" // or "line"
-                     labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                     // indicator="line" // Use line indicator for clarity
                      formatter={(value, name, props) => {
                          const payloadData = props.payload as any;
-                         if (name === 'close' && payloadData) {
+                         if (name === 'candleBody' && payloadData) { // Trigger tooltip on candleBody bar
                             return (
                               <div>
-                                <div><strong>Date:</strong> {new Date(payloadData.date).toLocaleDateString()}</div>
-                                <div><strong>O:</strong> ${payloadData.open?.toFixed(2)}</div>
-                                <div><strong>H:</strong> ${payloadData.high?.toFixed(2)}</div>
-                                <div><strong>L:</strong> ${payloadData.low?.toFixed(2)}</div>
-                                <div><strong>C:</strong> ${payloadData.close?.toFixed(2)}</div>
-                                <div><strong>Vol:</strong> {payloadData.volume?.toLocaleString()}</div>
+                                <div className="font-semibold">{new Date(payloadData.date).toLocaleDateString()}</div>
+                                <div><span className="text-muted-foreground">開:</span> ${payloadData.open?.toFixed(2)}</div>
+                                <div><span className="text-muted-foreground">高:</span> ${payloadData.high?.toFixed(2)}</div>
+                                <div><span className="text-muted-foreground">低:</span> ${payloadData.low?.toFixed(2)}</div>
+                                <div><span className="text-muted-foreground">收:</span> ${payloadData.close?.toFixed(2)}</div>
+                                <div><span className="text-muted-foreground">量:</span> {payloadData.volume?.toLocaleString()}</div>
                               </div>
                             );
                          }
-                         if (name === 'volume') {
-                             return null; // Volume info is included in the 'close' formatter
+                         // Don't show volume or wick in tooltip directly, it's in the main entry
+                         if (name === 'volume' || name === 'candleWick') {
+                             return null;
                          }
+                         // Fallback for unexpected names
                          return `${name}: ${value}`;
                      }}
-                     // Custom formatter to show OHLC and Volume
-                     // formatter={(value, name, props) => {
-                     //   if (name === 'close') {
-                     //      return `$${(value as number).toFixed(2)} (Close)`;
-                     //   }
-                     //   if (name === 'volume') {
-                     //      return `${(value as number).toLocaleString()} (Volume)`;
-                     //   }
-                     //   return `${name}: ${value}`;
-                     // }}
                    />
                  }
                />
 
-               {/* Price Line */}
-               <Line
-                 yAxisId="price"
-                 dataKey="close"
-                 type="monotone"
-                 stroke={chartConfig.close.color}
-                 strokeWidth={2}
-                 dot={false}
-                 isAnimationActive={!isLoading}
-                 animationDuration={300}
-                 name="Close" // Name for tooltip
-               />
+
+                {/* Candlestick Wick (High/Low) - Thin Bar */}
+                <Bar
+                   yAxisId="price"
+                   dataKey={(data) => [data.low, data.high]} // Data for the full range (low to high)
+                   name="candleWick" // Name for tooltip logic (hidden)
+                   barSize={1} // Make it very thin like a wick
+                   isAnimationActive={!isLoading}
+                   animationDuration={300}
+                 >
+                    {/* Color based on open/close */}
+                    {chartData.map((entry, index) => (
+                         <Cell
+                            key={`cell-wick-${index}`}
+                            fill={entry.close >= entry.open ? 'hsl(var(--chart-positive))' : 'hsl(var(--chart-negative))'}
+                         />
+                     ))}
+                 </Bar>
+
+                {/* Candlestick Body (Open/Close) - Thicker Bar */}
+                <Bar
+                  yAxisId="price"
+                  dataKey="candleBody" // Use the sorted [lowVal, highVal] of open/close
+                  name="candleBody" // Name for tooltip trigger
+                  barSize={8} // Adjust size as needed
+                  isAnimationActive={!isLoading}
+                  animationDuration={300}
+                  shape={<rect />} // Use basic shape, coloring done by Cell
+                 >
+                    {/* Color based on open/close */}
+                     {chartData.map((entry, index) => (
+                         <Cell
+                            key={`cell-body-${index}`}
+                            fill={entry.close >= entry.open ? 'hsl(var(--chart-positive))' : 'hsl(var(--chart-negative))'}
+                         />
+                     ))}
+                 </Bar>
 
                {/* Volume Bars */}
                <Bar
                  yAxisId="volume"
                  dataKey="volume"
-                 fill={chartConfig.volume.color}
-                 opacity={0.6}
+                 fill="hsl(var(--chart-2))" // Keep volume color consistent
+                 opacity={0.5} // Slightly less opaque
                  isAnimationActive={!isLoading}
                  animationDuration={300}
-                 name="Volume" // Name for tooltip
+                 name="Volume" // Name for tooltip logic (hidden)
                  />
 
                 {/* Brush for Zooming */}
                 <Brush
                     dataKey="date"
                     height={30}
-                    stroke={chartConfig.close.color} // Match line color
+                    stroke={'hsl(var(--chart-1))'} // Use a neutral color for brush
                     startIndex={brushStartIndex}
                     endIndex={brushEndIndex}
                     onChange={handleBrushChange}
@@ -242,7 +247,6 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                          const date = new Date(value);
                          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                      }}
-                    // travellerWidth={10} // Adjust handle width
                     />
 
              </ComposedChart>
@@ -263,7 +267,7 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
             </div>
         )}
          <div className="leading-none text-muted-foreground">
-           Displaying historical closing prices and volume. Data may be delayed. Use the brush/slider below the chart to zoom in on a specific date range.
+           Displaying historical OHLC (Open, High, Low, Close) prices and volume. Green candles indicate Close > Open, Red candles indicate Close < Open. Use the brush/slider below the chart to zoom. Data may be delayed.
          </div>
       </CardFooter>
     </Card>

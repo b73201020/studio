@@ -32,6 +32,8 @@ body {
     --chart-3: 200 50% 60%; /* A complementary blue */
     --chart-4: 120 40% 60%; /* A complementary green */
     --chart-5: 270 50% 65%; /* A complementary purple */
+    --chart-positive: 140 60% 50%; /* Green for candlestick up */
+    --chart-negative: 0 84.2% 60.2%; /* Red for candlestick down (using destructive) */
     --radius: 0.5rem;
      /* Keep sidebar vars, might be used later */
     --sidebar-background: 0 0% 98%;
@@ -69,6 +71,8 @@ body {
     --chart-3: 200 50% 50%;
     --chart-4: 120 40% 50%;
     --chart-5: 270 50% 55%;
+    --chart-positive: 140 50% 45%; /* Darker green for dark mode */
+    --chart-negative: 0 70% 40%; /* Darker red for dark mode */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 52 100% 50%;
