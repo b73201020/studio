@@ -16,119 +16,127 @@ import { Button } from "@/components/ui/button"; // Import Button
 
 
 export default function Home() {
-  const [ticker, setTicker] = React.useState<string | null>(null);
+  const [ticker, setTicker] = React.useState<string | null>("NVDA");
   const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
   const [stockData, setStockData] = React.useState<StockData[] | null>(null);
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true); // Start with loading true
   const [error, setError] = React.useState<string | null>(null);
   const { toast } = useToast();
 
   // Set initial dates on client-side to avoid hydration mismatch
   React.useEffect(() => {
-    setStartDate(subDays(new Date(), 90));
-    setEndDate(new Date());
+    const defaultStartDate = subDays(new Date(), 90);
+    const defaultEndDate = new Date();
+    setStartDate(defaultStartDate);
+    setEndDate(defaultEndDate);
   }, []);
 
-
-  // Function to trigger data fetch based on current state
-  const fetchData = async () => {
-    if (!ticker) {
+  // Fetch data function
+  const fetchData = React.useCallback(async (currentTicker: string, currentStartDate: Date, currentEndDate: Date) => {
+    if (!currentTicker) {
       setError("Please enter a ticker symbol.");
       toast({
         title: "Missing Ticker",
         description: "Please enter a stock ticker symbol first.",
         variant: "destructive",
       });
+      setIsLoading(false);
       return;
     }
-     if (!startDate || !endDate) {
+     if (!currentStartDate || !currentEndDate) {
       setError("Please select both a start and end date.");
        toast({
          title: "Missing Dates",
          description: "Please select a valid start and end date.",
          variant: "destructive",
        });
+       setIsLoading(false);
       return;
     }
-    if (startDate > endDate) {
+    if (currentStartDate > currentEndDate) {
         setError("Start date cannot be after end date.");
          toast({
             title: "Invalid Date Range",
             description: "The start date cannot be after the end date.",
             variant: "destructive",
          });
+         setIsLoading(false);
         return;
     }
 
     setIsLoading(true);
     setError(null);
-    // Don't clear ticker here, keep it persistent
-    setStockData(null); // Clear previous data immediately
+    setStockData(null);
 
-    const formattedStartDate = format(startDate, 'yyyy-MM-dd');
-    const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+    const formattedStartDate = format(currentStartDate, 'yyyy-MM-dd');
+    const formattedEndDate = format(currentEndDate, 'yyyy-MM-dd');
 
     try {
       // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 500));
-      const data = await getHistoricalStockData(ticker, formattedStartDate, formattedEndDate);
+      const data = await getHistoricalStockData(currentTicker, formattedStartDate, formattedEndDate);
 
       if (data.length === 0) {
-         setError(`No historical data found for ticker: ${ticker} between ${formattedStartDate} and ${formattedEndDate}`);
+         setError(`No historical data found for ticker: ${currentTicker} between ${formattedStartDate} and ${formattedEndDate}`);
          toast({
             title: "No Data Found",
-            description: `Could not retrieve historical stock data for ${ticker} in the selected date range.`,
+            description: `Could not retrieve historical stock data for ${currentTicker} in the selected date range.`,
             variant: "destructive",
          });
       } else {
          setStockData(data);
          toast({
             title: "Data Loaded",
-            description: `Successfully loaded historical data for ${ticker}.`,
+            description: `Successfully loaded historical data for ${currentTicker}.`,
          });
       }
     } catch (err) {
       console.error("Error fetching stock data:", err);
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-      setError(`Failed to fetch data for ${ticker}: ${errorMessage}`);
+      setError(`Failed to fetch data for ${currentTicker}: ${errorMessage}`);
        toast({
           title: "Error Fetching Data",
-          description: `Could not retrieve data for ${ticker}. Please try again.`,
+          description: `Could not retrieve data for ${currentTicker}. Please try again.`,
           variant: "destructive",
        });
     } finally {
       setIsLoading(false);
+    }
+  }, [toast]); // Add toast to dependency array
+
+  // Effect to fetch initial data for default ticker once dates are set
+  React.useEffect(() => {
+    if (ticker && startDate && endDate && !stockData) { // only run once on init
+      fetchData(ticker, startDate, endDate);
+    }
+  }, [ticker, startDate, endDate, stockData, fetchData]);
+
+
+  const handleUpdateClick = () => {
+    if (ticker && startDate && endDate) {
+      fetchData(ticker, startDate, endDate);
     }
   };
 
   // Handle ticker submission
   const handleTickerSubmit = (tickerSymbol: string) => {
      if (!tickerSymbol) return;
-     setTicker(tickerSymbol.toUpperCase());
-     // Trigger fetch immediately after setting ticker if dates are valid
-     if (startDate && endDate && startDate <= endDate) {
-         fetchData();
-     } else if (!startDate || !endDate) {
-         // If dates are not set yet, just set the ticker and wait for date selection or button click
-          setError("Please select a start and end date."); // Remind user
-     } else {
-         setError("Start date cannot be after end date."); // Remind user
+     const newTicker = tickerSymbol.toUpperCase();
+     setTicker(newTicker);
+     if (startDate && endDate) {
+         fetchData(newTicker, startDate, endDate);
      }
    };
 
 
-  // Handle date changes - optionally trigger fetch if ticker is already set
+  // Handle date changes
   const handleStartDateChange = (date: Date | undefined) => {
       setStartDate(date);
-      // Optional: Automatically fetch if ticker exists and dates are valid
-      // if (ticker && date && endDate && date <= endDate) fetchData();
   };
 
   const handleEndDateChange = (date: Date | undefined) => {
       setEndDate(date);
-      // Optional: Automatically fetch if ticker exists and dates are valid
-      // if (ticker && startDate && date && startDate <= date) fetchData();
   };
 
   // Disable dates after today for the end date picker
@@ -192,7 +200,7 @@ export default function Home() {
         </div>
          {/* Update Button */}
          <div className="w-full max-w-xs md:w-auto flex justify-center md:self-end">
-           <Button onClick={fetchData} disabled={isLoading || !ticker || !startDate || !endDate || startDate > endDate} className="w-full md:w-auto">
+           <Button onClick={handleUpdateClick} disabled={isLoading || !ticker || !startDate || !endDate || (startDate && endDate && startDate > endDate)} className="w-full md:w-auto">
               <CalendarDays className="mr-2 h-4 w-4" />
                {isLoading ? "載入 Loading..." : "更新 Update Range"}
            </Button>
