@@ -36,8 +36,13 @@ type PriceChartProps = {
   ticker: string | null;
 };
 
-// Define colors in config (or use inline styles)
-// Removed chartConfig as colors are now handled by CSS variables and Cell rendering
+// Custom shape component that filters out non-SVG props
+const CustomRect = (props: any) => {
+  const { x, y, width, height, fill, className } = props;
+  // Only pass standard SVG attributes to the rect element
+  return <rect x={x} y={y} width={width} height={height} fill={fill} className={className} />;
+};
+
 
 export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
   const chartData = React.useMemo(() => {
@@ -199,7 +204,7 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                    barSize={1} // Make it very thin like a wick
                    isAnimationActive={!isLoading}
                    animationDuration={300}
-                   shape={<rect />} // Use basic shape, coloring done by Cell
+                   shape={<CustomRect />} // Use basic shape, coloring done by Cell
                  >
                     {/* Color based on open/close */}
                     {chartData.map((entry, index) => (
@@ -218,7 +223,7 @@ export function PriceChart({ data, isLoading, ticker }: PriceChartProps) {
                   barSize={8} // Adjust size as needed
                   isAnimationActive={!isLoading}
                   animationDuration={300}
-                  shape={<rect />} // Use basic shape, coloring done by Cell
+                  shape={<CustomRect />} // Use basic shape, coloring done by Cell
                  >
                     {/* Color based on open/close */}
                      {chartData.map((entry, index) => (
