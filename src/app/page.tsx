@@ -17,12 +17,19 @@ import { Button } from "@/components/ui/button"; // Import Button
 
 export default function Home() {
   const [ticker, setTicker] = React.useState<string | null>(null);
-  const [startDate, setStartDate] = React.useState<Date | undefined>(subDays(new Date(), 90));
-  const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
+  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
   const [stockData, setStockData] = React.useState<StockData[] | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
   const { toast } = useToast();
+
+  // Set initial dates on client-side to avoid hydration mismatch
+  React.useEffect(() => {
+    setStartDate(subDays(new Date(), 90));
+    setEndDate(new Date());
+  }, []);
+
 
   // Function to trigger data fetch based on current state
   const fetchData = async () => {
@@ -144,7 +151,7 @@ export default function Home() {
     <main className="container mx-auto flex min-h-screen flex-col items-center p-4 md:p-8 lg:p-12">
       <header className="w-full mb-8 md:mb-12 text-center">
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-          StockPeek 📈
+          StockPeeker 股票K線圖 📈
         </h1>
         <p className="text-muted-foreground">
           Enter a stock ticker and select a date range to view historical price data.
@@ -161,7 +168,7 @@ export default function Home() {
         {/* Date Pickers */}
         <div className="w-full max-w-xs md:w-auto flex flex-col gap-2 sm:flex-row sm:gap-4">
             <div className="flex-1 space-y-1">
-              <Label htmlFor="start-date">Start Date</Label>
+              <Label htmlFor="start-date">開始日期 Start Date</Label>
               <DatePicker
                  date={startDate}
                  setDate={handleStartDateChange}
@@ -172,7 +179,7 @@ export default function Home() {
                  />
             </div>
             <div className="flex-1 space-y-1">
-              <Label htmlFor="end-date">End Date</Label>
+              <Label htmlFor="end-date">結束日期 End Date</Label>
                <DatePicker
                    date={endDate}
                    setDate={handleEndDateChange}
@@ -187,7 +194,7 @@ export default function Home() {
          <div className="w-full max-w-xs md:w-auto flex justify-center md:self-end">
            <Button onClick={fetchData} disabled={isLoading || !ticker || !startDate || !endDate || startDate > endDate} className="w-full md:w-auto">
               <CalendarDays className="mr-2 h-4 w-4" />
-               {isLoading ? "Loading..." : "Update Range"}
+               {isLoading ? "載入 Loading..." : "更新 Update Range"}
            </Button>
          </div>
 
