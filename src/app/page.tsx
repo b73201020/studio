@@ -4,7 +4,6 @@
 import * as React from "react";
 import { format, subDays } from "date-fns";
 import { getHistoricalStockData, type StockData } from "@/services/stock-data";
-import { TickerForm } from "@/components/stock/TickerForm";
 import { PriceTable } from "@/components/stock/PriceTable";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,7 +11,8 @@ import { AlertTriangle, CalendarDays } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/stock/DatePicker";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button"; // Import Button
+import { Button } from "@/components/ui/button";
+import { TickerSearch } from "@/components/stock/TickerSearch";
 
 
 export default function Home() {
@@ -119,8 +119,8 @@ export default function Home() {
     }
   };
 
-  // Handle ticker submission
-  const handleTickerSubmit = (tickerSymbol: string) => {
+  // Handle ticker submission from TickerSearch
+  const handleTickerSelect = (tickerSymbol: string) => {
      if (!tickerSymbol) return;
      const newTicker = tickerSymbol.toUpperCase();
      setTicker(newTicker);
@@ -168,9 +168,9 @@ export default function Home() {
 
       {/* Input Section */}
       <section className="w-full max-w-4xl mb-8 md:mb-12 flex flex-col items-center gap-4 md:flex-row md:justify-center md:items-end md:gap-6">
-        {/* Ticker Form */}
+        {/* Ticker Search */}
         <div className="w-full max-w-xs md:w-auto md:flex-grow">
-           <TickerForm onSubmit={handleTickerSubmit} isLoading={isLoading} defaultTicker={ticker ?? ""} />
+           <TickerSearch onSelect={handleTickerSelect} isLoading={isLoading} defaultTicker={ticker ?? ""} />
         </div>
 
         {/* Date Pickers */}
